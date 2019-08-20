@@ -5,6 +5,8 @@ require 'html2markdown'
 class Post
   attr_reader :datestamp, :author
 
+  SAFE_FILENAME_REGEX = /[^0-9a-z\s]/i
+
   def initialize(opts = {})
     @title     = opts[:title]
     @datestamp = opts[:datestamp]
@@ -32,7 +34,8 @@ class Post
   def filename
     iso_8601 = timestamp.strftime("%Y-%m-%d")
     cleaned = title.downcase.gsub('&', 'and')
-                            .gsub(/0-9a-z\\s/i, '')
+                            .gsub(SAFE_FILENAME_REGEX, '')
+
     parameterized = cleaned.split(' ').join('-')
 
     "#{iso_8601}-#{parameterized}.md"
