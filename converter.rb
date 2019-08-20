@@ -48,13 +48,15 @@ class Post
     puts body[0, 1000] + " [...]"
   end
 
-  def export!
-    File.open(filename, 'w') do |f|
-      f << "Hello, world.\n"
+  def export(target_dir)
+    target_path = File.join(target_dir, filename)
+    puts "Writing to #{target_path}"
+
+    File.open(target_path, 'w') do |f|
       f << "---\n"
       f << "title: \"#{title}\"\n"
       f << "author: \"#{author}\"\n"
-      f << "date: #{date}\n"
+      f << "date: #{timestamp}\n"
       f << "---\n\n"
       f << body
     end
@@ -80,11 +82,24 @@ class Converter
     rss = parse_rss(source)
     doc = Nokogiri::XML(rss)
     posts = doc.xpath('//item')
+
+    # Clean target directory or create
+    if Dir.exist?(target)
+      puts "Deleting entries in target directory"
+      FileUtils.rm_rf Dir.glob("#{target}/*")
+    else
+      FileUtils.mkdir(target)
+    end
+
     generate_markdown(posts)
   end
 
   def dry_run?
     opts[:dry_run] == true
+  end
+
+  def verbose?
+    opts[:verbose] == true
   end
 
   private
@@ -111,11 +126,12 @@ class Converter
       if dry_run?
         obj.print
       else
-        obj.export!
+        obj.export(target)
       end
     end
   end
 end
 
 
-Converter.new("./src/feed.xml", "./exports", dry_run: true).convert
+# Converter.new("./src/feed.xml", "./exports", dry_run: true).convert
+Converter.new("./src/feed.xml", "./exports").convert
