@@ -68,6 +68,9 @@ class Post
   private
 
   def titleize(title)
+    # Convert double quotes to single quote
+    title.gsub!(/\"/, "'")
+    # Standardize capitalization
     title.downcase.split(' ').map { |word| word.capitalize }.join(' ')
   end
 end
