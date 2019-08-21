@@ -3,19 +3,22 @@ require 'pry-byebug'
 require 'html2markdown'
 
 class Post
-  attr_reader :datestamp, :author
+  attr_reader :datestamp, :author, :raw_title
 
   SAFE_FILENAME_REGEX = /[^0-9a-z\s]/i
 
   def initialize(opts = {})
-    @title     = opts[:title]
+    @raw_title = opts[:title]
     @datestamp = opts[:datestamp]
     @author    = opts[:author]
     @body      = opts[:body]
   end
 
   def title
-    titleize(@title)
+    # Convert double quotes to single quote
+    title_out = raw_title.gsub(/\"/, "'")
+    # Standardize capitalization
+    title_out.downcase.split(' ').map { |word| word.capitalize }.join(' ')
   end
 
   def body_html
@@ -40,38 +43,37 @@ class Post
 
     "#{iso_8601}-#{parameterized}.md"
   end
+end
 
-  def print
-    puts "Filename: #{filename}\n\n"
-    puts "---"
-    puts "title: \"#{title}\""
-    puts "author: \"#{author}\""
-    puts "date: #{timestamp}"
-    puts "---\n\n"
-    puts body[0, 1000] + " [...]"
+class Exporter
+  attr_reader :post
+
+  def initialize(post)
+    @post = post
   end
 
-  def export(target_dir)
-    target_path = File.join(target_dir, filename)
+  def print
+    puts "Filename: #{post.filename}\n\n"
+    puts "---"
+    puts "title: \"#{post.title}\""
+    puts "author: \"#{post.author}\""
+    puts "date: #{post.timestamp}"
+    puts "---\n\n"
+    puts post.body[0, 1000] + " [...]"
+  end
+
+  def write_file(target_dir)
+    target_path = File.join(target_dir, post.filename)
     puts "Writing to #{target_path}"
 
     File.open(target_path, 'w') do |f|
       f << "---\n"
-      f << "title: \"#{title}\"\n"
-      f << "author: \"#{author}\"\n"
-      f << "date: #{timestamp}\n"
+      f << "title: \"#{post.title}\"\n"
+      f << "author: \"#{post.author}\"\n"
+      f << "date: #{post.timestamp}\n"
       f << "---\n\n"
-      f << body
+      f << post.body
     end
-  end
-
-  private
-
-  def titleize(title)
-    # Convert double quotes to single quote
-    title.gsub!(/\"/, "'")
-    # Standardize capitalization
-    title.downcase.split(' ').map { |word| word.capitalize }.join(' ')
   end
 end
 
@@ -122,17 +124,18 @@ class Converter
 
   def generate_markdown(posts)
     posts.each do |post|
-      obj = Post.new({
+      post_obj = Post.new({
         title: post.at_css('title').text,
         author: post.css('dc|creator').text,
         datestamp: post.css('pubDate').text,
         body: post.css('content|encoded').text
       })
 
+      export = Exporter.new(post_obj)
       if dry_run?
-        obj.print
+        export.print
       else
-        obj.export(target)
+        export.write_file(target)
       end
     end
   end
