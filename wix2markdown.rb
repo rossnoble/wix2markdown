@@ -1,3 +1,4 @@
+require 'time'
 require 'nokogiri'
 require 'pry-byebug'
 require 'html2markdown'
@@ -50,11 +51,12 @@ class Wix2Markdown
     end
 
     def filename
-      iso_8601 = timestamp.strftime("%Y-%m-%d")
       cleaned = title.downcase.gsub('&', 'and')
                               .gsub(SAFE_FILENAME_REGEX, '')
 
       parameterized = cleaned.split(' ').join('-')
+      
+      iso_8601 = timestamp.strftime("%Y-%m-%d")
 
       "#{iso_8601}-#{parameterized}.md"
     end
